@@ -138,66 +138,67 @@ createApp({
             this.currentIndex++;
             this.isFlipped = false;
             
-            // 使用英式发音
             if (this.speechSynthesis) {
-                this.speechUtterance = new SpeechSynthesisUtterance(this.currentWord.en);
-                this.speechUtterance.lang = 'en-GB';
-                
-                // 获取所有可用的声音
                 const voices = this.speechSynthesis.getVoices();
-                // 选择英式女声
                 const britishVoice = voices.find(voice => 
                     voice.lang.includes('en-GB') && voice.name.includes('Female'));
                 
-                if (britishVoice) {
-                    this.speechUtterance.voice = britishVoice;
-                }
+                let repeatCount = 0;
+                const speakWord = () => {
+                    const utterance = new SpeechSynthesisUtterance(this.currentWord.en);
+                    utterance.lang = 'en-GB';
+                    utterance.voice = britishVoice;
+                    
+                    utterance.onend = () => {
+                        repeatCount++;
+                        if (repeatCount < parseInt(this.repeatCount)) {
+                            setTimeout(speakWord, this.interval * 1000);
+                        }
+                    };
+                    
+                    this.speechSynthesis.speak(utterance);
+                };
                 
-                // 重复朗读指定次数，使用用户设置的间隔时间
-                for (let i = 0; i < parseInt(this.repeatCount); i++) {
-                    setTimeout(() => {
-                        const utterance = new SpeechSynthesisUtterance(this.currentWord.en);
-                        utterance.lang = 'en-GB';
-                        utterance.voice = britishVoice;
-                        this.speechSynthesis.speak(utterance);
-                    }, i * (this.interval * 1000)); // 使用用户设置的间隔时间
-                }
+                speakWord();
             }
         },
+
         async start() {
             if (!this.canStart) return;
             
             await this.loadWords();
             if (this.words.length === 0) return;
-
+        
             this.isPlaying = true;
             this.currentIndex = 0;
-            const totalRepeatCount = parseInt(this.repeatCount);
             
             const showWord = () => {
                 this.showNextWord();
                 
+                this.currentWord.progress = `第${this.currentIndex}/${this.words.length}个单词`;
+                
                 if (this.currentIndex >= this.words.length) {
                     this.currentIndex = 0;
-                    this.currentWord = this.words[this.currentIndex];
                 }
                 
-                // 更新进度提示
-                this.currentWord.progress = `第${this.currentIndex + 1}/${this.words.length}个单词`;
-                
-                if (this.currentIndex < this.words.length) {
-                    // 等待所有重复朗读完成后再显示下一个单词
-                    this.timer = setTimeout(showWord, this.interval * 1000 + this.repeatCount * 1000);
-                } else {
-                    this.isPlaying = false;
-                    alert('恭喜！单词学习完成！');
-                }
+                // 等待当前单词的所有重复读音完成后再显示下一个单词
+                const totalDelay = this.repeatCount * this.interval * 1000;
+                this.timer = setTimeout(showWord, totalDelay);
             };
-
+        
             showWord();
-        },
+        }, // 添加逗号
+
         reset() {
+            // 停止所有朗读
+            if (this.speechSynthesis) {
+                this.speechSynthesis.cancel();
+            }
+            
+            // 清除定时器
             clearTimeout(this.timer);
+            
+            // 重置所有状态
             this.grade = '';
             this.unit = '';
             this.repeatCount = '';
@@ -207,6 +208,7 @@ createApp({
             this.currentIndex = 0;
             this.isPlaying = false;
             this.words = [];
+            this.speechUtterance = null;
         }
     }
 }).mount('#app')
