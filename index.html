@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>沐沐单词小达人</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app" class="container">
+        <h1 class="title">沐沐单词小达人（1-6年级）</h1>
+        <div class="motto">{{ dailyMotto }}</div>
+        
+        <div class="theme-selector">
+            <div class="control-label">主题：</div>
+            <select v-model="theme">
+                <option value="pink">粉色</option>
+                <option value="blue">蓝色</option>
+                <option value="purple">紫色</option>
+                <option value="green">绿色</option>
+            </select>
+        </div>
+
+        <div class="card" @click="flipCard">
+            <div class="word-en">{{ currentWord.en || 'Ready?' }}</div>
+            <div class="word-cn" :class="{ show: isFlipped }">{{ currentWord.cn || '准备开始' }}</div>
+        </div>
+
+        <div class="controls">
+            <div class="control-row">
+                <div class="control-label">年级：</div>
+                <select v-model="grade">
+                    <option value="">选择年级</option>
+                    <option value="一年级上册">一年级上册</option>
+                    <option value="一年级下册">一年级下册</option>
+                    <option value="二年级上册">二年级上册</option>
+                    <option value="二年级下册">二年级下册</option>
+                    <option value="三年级上册">三年级上册</option>
+                    <option value="三年级下册">三年级下册</option>
+                    <option value="四年级上册">四年级上册</option>
+                    <option value="四年级下册">四年级下册</option>
+                    <option value="五年级上册">五年级上册</option>
+                    <option value="五年级下册">五年级下册</option>
+                    <option value="六年级上册">六年级上册</option>
+                    <option value="六年级下册">六年级下册</option>
+                </select>
+            </div>
+            <div class="control-row">
+                <div class="control-label">单元：</div>
+                <select v-model="unit">
+                    <option value="">选择单元</option>
+                    <option v-for="n in 6" :key="n" :value="n">Unit {{n}}</option>
+                </select>
+            </div>
+            <div class="control-row">
+                <div class="control-label">重复次数：</div>
+                <input type="number" v-model="repeatCount" placeholder="请输入重复次数">
+            </div>
+            <div class="control-row">
+                <div class="control-label">间隔时间：</div>
+                <input type="number" v-model="interval" placeholder="请输入间隔时间（秒）">
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="start-btn" @click="start" :disabled="!canStart">Start</button>
+            <button class="reset-btn" @click="reset">Reset</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
