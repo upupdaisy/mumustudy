@@ -138,29 +138,31 @@ createApp({
             this.currentIndex++;
             this.isFlipped = false;
             
-            if (this.speechSynthesis) {
-                const voices = this.speechSynthesis.getVoices();
-                const britishVoice = voices.find(voice => 
-                    voice.lang.includes('en-GB') && voice.name.includes('Female'));
-                
-                let repeatCount = 0;
-                const speakWord = () => {
-                    const utterance = new SpeechSynthesisUtterance(this.currentWord.en);
-                    utterance.lang = 'en-GB';
-                    utterance.voice = britishVoice;
+            return new Promise(async (resolve) => {
+                if (this.speechSynthesis) {
+                    const voices = this.speechSynthesis.getVoices();
+                    const britishVoice = voices.find(voice => 
+                        voice.lang.includes('en-GB') && voice.name.includes('Female'));
                     
-                    utterance.onend = () => {
-                        repeatCount++;
-                        if (repeatCount < parseInt(this.repeatCount)) {
-                            setTimeout(speakWord, this.interval * 1000);
-                        }
+                    const speakOnce = () => {
+                        return new Promise(resolve => {
+                            const utterance = new SpeechSynthesisUtterance(this.currentWord.en);
+                            utterance.lang = 'en-GB';
+                            utterance.voice = britishVoice;
+                            utterance.onend = resolve;
+                            this.speechSynthesis.speak(utterance);
+                        });
                     };
                     
-                    this.speechSynthesis.speak(utterance);
-                };
-                
-                speakWord();
-            }
+                    for (let i = 0; i < parseInt(this.repeatCount); i++) {
+                        await speakOnce();
+                        if (i < parseInt(this.repeatCount) - 1) {
+                            await new Promise(resolve => setTimeout(resolve, this.interval * 1000));
+                        }
+                    }
+                    resolve();
+                }
+            });
         },
 
         async start() {
@@ -172,8 +174,8 @@ createApp({
             this.isPlaying = true;
             this.currentIndex = 0;
             
-            const showWord = () => {
-                this.showNextWord();
+            const showWord = async () => {
+                await this.showNextWord();
                 
                 this.currentWord.progress = `第${this.currentIndex}/${this.words.length}个单词`;
                 
@@ -181,13 +183,14 @@ createApp({
                     this.currentIndex = 0;
                 }
                 
-                // 等待当前单词的所有重复读音完成后再显示下一个单词
-                const totalDelay = this.repeatCount * this.interval * 1000;
-                this.timer = setTimeout(showWord, totalDelay);
+                if (this.isPlaying) {
+                    // 使用用户设定的间隔时间切换到下一个单词
+                    this.timer = setTimeout(showWord, this.interval * 1000);
+                }
             };
         
             showWord();
-        }, // 添加逗号
+        },
 
         reset() {
             // 停止所有朗读
@@ -196,9 +199,13 @@ createApp({
             }
             
             // 清除定时器
-            clearTimeout(this.timer);
+            if (this.timer) {
+                clearTimeout(this.timer);
+                this.timer = null;
+            }
             
             // 重置所有状态
+            this.isPlaying = false;
             this.grade = '';
             this.unit = '';
             this.repeatCount = '';
@@ -206,7 +213,6 @@ createApp({
             this.isFlipped = false;
             this.currentWord = {};
             this.currentIndex = 0;
-            this.isPlaying = false;
             this.words = [];
             this.speechUtterance = null;
         }
