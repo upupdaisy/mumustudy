@@ -31,6 +31,15 @@ createApp({
             ]
         }
     },
+    computed: {
+        canStart() {
+            return this.grade && 
+                   this.unit && 
+                   this.repeatCount > 0 && 
+                   this.interval > 0 && 
+                   !this.isPlaying;
+        }
+    },
     created() {
         this.updateMotto();
         document.documentElement.setAttribute('data-theme', this.theme);
@@ -129,18 +138,29 @@ createApp({
             this.currentIndex++;
             this.isFlipped = false;
             
-            // 朗读当前单词指定次数
+            // 使用英式发音
             if (this.speechSynthesis) {
                 this.speechUtterance = new SpeechSynthesisUtterance(this.currentWord.en);
-                this.speechUtterance.lang = 'en-US';
-                this.speechUtterance.voice = this.speechSynthesis.getVoices().find(voice => 
-                    voice.lang.includes('en-US') && voice.name.includes('female'));
+                this.speechUtterance.lang = 'en-GB';
                 
-                // 重复朗读指定次数
+                // 获取所有可用的声音
+                const voices = this.speechSynthesis.getVoices();
+                // 选择英式女声
+                const britishVoice = voices.find(voice => 
+                    voice.lang.includes('en-GB') && voice.name.includes('Female'));
+                
+                if (britishVoice) {
+                    this.speechUtterance.voice = britishVoice;
+                }
+                
+                // 重复朗读指定次数，使用用户设置的间隔时间
                 for (let i = 0; i < parseInt(this.repeatCount); i++) {
                     setTimeout(() => {
-                        this.speechSynthesis.speak(new SpeechSynthesisUtterance(this.currentWord.en));
-                    }, i * 1000); // 每次朗读间隔1秒
+                        const utterance = new SpeechSynthesisUtterance(this.currentWord.en);
+                        utterance.lang = 'en-GB';
+                        utterance.voice = britishVoice;
+                        this.speechSynthesis.speak(utterance);
+                    }, i * (this.interval * 1000)); // 使用用户设置的间隔时间
                 }
             }
         },
